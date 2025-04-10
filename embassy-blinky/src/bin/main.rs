@@ -4,9 +4,46 @@
 use defmt::info;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Timer};
-use esp_hal::clock::CpuClock;
-use esp_hal::timer::systimer::SystemTimer;
+use esp_hal::{gpio::GpioPin, rmt::Rmt, time::Rate, timer::systimer::SystemTimer};
+use esp_hal_smartled::{smartLedBuffer, SmartLedsAdapter};
 use panic_rtt_target as _;
+use smart_leds::{
+    brightness, gamma,
+    hsv::{hsv2rgb, Hsv},
+    SmartLedsWrite
+};
+
+#[embassy_executor::task]
+async fn blinky_task(led_pin: GpioPin<8>, rmt: Rmt<'static, esp_hal::Blocking>) {
+    info!("Blinky task started");
+
+    let rmt_buffer = smartLedBuffer!(1);
+    let mut led = 
+        SmartLedsAdapter::new(rmt.channel0, led_pin, rmt_buffer);
+
+    let delay = Duration::from_millis(20);
+
+    let mut color = Hsv {
+        hue: 0,
+        sat: 255,
+        val: 255,
+    };
+    let mut data;
+
+    info!("Led initialized... -> Starting rainbow from task :)");
+
+    loop {
+        for hue in 0..=255 {
+            color.hue = hue;
+
+            data = [hsv2rgb(color)];
+
+            led.write(brightness(gamma(data.iter().cloned()), 5)).unwrap();
+
+            Timer::after(delay).await;
+        }
+    }
+}
 
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
@@ -14,7 +51,7 @@ async fn main(spawner: Spawner) {
 
     rtt_target::rtt_init_defmt!();
 
-    let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
+    let config = esp_hal::Config::default();
     let peripherals = esp_hal::init(config);
 
     let timer0 = SystemTimer::new(peripherals.SYSTIMER);
@@ -22,13 +59,14 @@ async fn main(spawner: Spawner) {
 
     info!("Embassy initialized!");
 
-    // TODO: Spawn some tasks
-    let _ = spawner;
+    let led_pin = peripherals.GPIO8;
+    let rmt = Rmt::new(peripherals.RMT, Rate::from_mhz(80)).unwrap();
+
+    spawner.spawn(blinky_task(led_pin, rmt)).unwrap();
+    info!("Blinky task spawned!");
 
     loop {
-        info!("Hello world!");
-        Timer::after(Duration::from_secs(1)).await;
+        info!("Main Task running...");
+        Timer::after(Duration::from_secs(5)).await;
     }
-
-    // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.0.0-beta.0/examples/src/bin
 }

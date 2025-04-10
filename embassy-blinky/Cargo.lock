@@ -189,13 +189,15 @@ name = "embassy-blinky"
 version = "0.1.0"
 dependencies = [
  "critical-section",
- "defmt 0.3.100",
+ "defmt 1.0.1",
  "embassy-executor",
  "embassy-time",
  "esp-hal",
  "esp-hal-embassy",
+ "esp-hal-smartled",
  "panic-rtt-target",
  "rtt-target",
+ "smart-leds",
  "static_cell",
 ]
 
@@ -519,6 +521,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "esp-hal-smartled"
+version = "0.14.0"
+source = "git+https://github.com/esp-rs/esp-hal-community.git#a61366829c28e8b99d2a9ffc6c19abd0320366bf"
+dependencies = [
+ "document-features",
+ "esp-hal",
+ "smart-leds-trait",
 ]
 
 [[package]]
@@ -894,6 +906,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 
 [[package]]
+name = "rgb"
+version = "0.8.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57397d16646700483b67d2dd6511d79318f9d057fdbd21a4066aeac8b41d310a"
+dependencies = [
+ "bytemuck",
+]
+
+[[package]]
 name = "riscv"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -979,6 +1000,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "87607cb1398ed59d48732e575a4c28a7a8ebf2454b964fe3f224f2afc07909e1"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "smart-leds"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66df34e571fa9993fa6f99131a374d58ca3d694b75f9baac93458fe0d6057bf0"
+dependencies = [
+ "smart-leds-trait",
+]
+
+[[package]]
+name = "smart-leds-trait"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "edeb89c73244414bb0568611690dd095b2358b3fda5bae65ad784806cca00157"
+dependencies = [
+ "rgb",
 ]
 
 [[package]]
