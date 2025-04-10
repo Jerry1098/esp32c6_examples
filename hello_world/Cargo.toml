@@ -1,5 +1,5 @@
 [package]
-name = "blinky"
+name = "hello_world"
 version = "0.1.0"
 authors = ["Sergio Gasquez <sergio.gasquez@gmail.com>"]
 edition = "2021"

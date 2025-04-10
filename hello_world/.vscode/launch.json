@@ -11,7 +11,7 @@
             //"probe": "VID:PID:<Serial>", //!MODIFY (or remove) | optional field
             "flashingConfig": {
                 "flashingEnabled": true,
-                "haltAfterReset": true,
+                "haltAfterReset": false,
                 "formatOptions": {
                     "binaryFormat": "idf"
                 }
