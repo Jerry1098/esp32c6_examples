@@ -10,6 +10,7 @@ path = "./src/bin/main.rs"
 [dependencies]
 critical-section = "1.2.0"
 defmt = "1.0.1"
+dotenvy_macro = "0.15.7"
 embassy-executor = { version = "0.7.0", features = [
   "defmt",
   "task-arena-size-20480",
@@ -25,15 +26,22 @@ esp-hal = { version = "1.0.0-beta.0", features = [
 ] }
 esp-hal-embassy = { version = "0.7.0", features = ["esp32c6"] }
 esp-ieee802154 = { version = "0.6.0", features = ["defmt", "esp32c6"] }
-openthread = { git = "https://github.com/esp-rs/openthread.git", features = [
+heapless = { version = "0.8.0", features = ["defmt-03"] }
+openthread = { git = "https://github.com/Jerry1098/openthread.git", features = [
   "defmt",
   "udp",
   "srp",
   "isupper",
+  "esp-ieee802154"
 ] }
 panic-rtt-target = { version = "0.2.0", features = ["defmt"] }
 rtt-target = { version = "0.6.1", features = ["defmt"] }
 static_cell = { version = "2.1.0", features = ["nightly"] }
+
+tinyrlibc = { version = "*", default-features = false, features = [
+  "utoa",
+  "strtoul",
+] }
 
 [profile.dev]
 # Rust debug is too slow.
