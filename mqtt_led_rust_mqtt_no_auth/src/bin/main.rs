@@ -25,8 +25,8 @@ use smoltcp::wire::DnsQueryType;
 
 extern crate alloc;
 
-const SSID: &str = "Place";
-const PASSWORD: &str = "holder";
+const SSID: &str = "Neuland";
+const PASSWORD: &str = "GMKspY7A8brqw63y";
 
 const MQTT_FQDN: &str = "homeassistant";
 const MQTT_PORT: u16 = 1883;
