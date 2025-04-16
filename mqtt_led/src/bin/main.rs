@@ -3,7 +3,7 @@
 
 // Used Source: https://github.com/JurajSadel/esp32c3-no-std-async-mqtt-demo
 
-
+use core::fmt::Write;
 use defmt::{debug, error, info};
 use embassy_executor::Spawner;
 use embassy_net::tcp::TcpSocket;
@@ -12,15 +12,14 @@ use embassy_time::{Duration, Timer};
 use esp_hal::clock::CpuClock;
 use esp_hal::timer::systimer::SystemTimer;
 use esp_hal::timer::timg::TimerGroup;
-use esp_wifi::wifi::{ClientConfiguration, Configuration, WifiController, WifiDevice, WifiEvent, WifiState};
+use esp_wifi::wifi::{
+    ClientConfiguration, Configuration, WifiController, WifiDevice, WifiEvent, WifiState,
+};
 use esp_wifi::{init, EspWifiController};
 use heapless::String;
+use minimq::mqtt_client::MqttClient;
+use minimq::Minimq;
 use panic_rtt_target as _;
-use core::fmt::Write;
-use rust_mqtt::client::client::MqttClient;
-use rust_mqtt::client::client_config::ClientConfig;
-use rust_mqtt::packet::v5::reason_codes::ReasonCode;
-use rust_mqtt::utils::rng_generator::CountingRng;
 use smoltcp::wire::DnsQueryType;
 
 extern crate alloc;
@@ -37,12 +36,11 @@ macro_rules! mk_static {
         #[deny(unused_attributes)]
         let x = STATIC_CELL.uninit().write(($val));
         x
-    }}
+    }};
 }
 
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
-
     rtt_target::rtt_init_defmt!();
 
     info!("Hello World");
@@ -59,17 +57,25 @@ async fn main(spawner: Spawner) {
 
     let timer1 = TimerGroup::new(peripherals.TIMG0);
     let mut rng = esp_hal::rng::Rng::new(peripherals.RNG);
-    let esp_wifi_controller: &EspWifiController<'static> = &*mk_static!(EspWifiController<'static>, init(timer1.timer0, rng.clone(), peripherals.RADIO_CLK).unwrap());
+    let esp_wifi_controller: &EspWifiController<'static> = &*mk_static!(
+        EspWifiController<'static>,
+        init(timer1.timer0, rng.clone(), peripherals.RADIO_CLK).unwrap()
+    );
 
-    let (controller, interface) = esp_wifi::wifi::new(&esp_wifi_controller, peripherals.WIFI).unwrap();
+    let (controller, interface) =
+        esp_wifi::wifi::new(&esp_wifi_controller, peripherals.WIFI).unwrap();
     let wifi_interface = interface.sta;
 
     let config = embassy_net::Config::dhcpv4(Default::default());
     let seed = (rng.random() as u64) << 32 | rng.random() as u64;
 
     // Init network stack
-    let (stack, runner) = embassy_net::new(wifi_interface, config, mk_static!(StackResources<3>, StackResources::<3>::new()), seed);
-
+    let (stack, runner) = embassy_net::new(
+        wifi_interface,
+        config,
+        mk_static!(StackResources<3>, StackResources::<3>::new()),
+        seed,
+    );
 
     spawner.spawn(connection(controller)).ok();
     spawner.spawn(net_task(runner)).ok();
@@ -124,37 +130,24 @@ async fn main(spawner: Spawner) {
         }
         info!("Connected!");
 
-        let mut config = ClientConfig::new(rust_mqtt::client::client_config::MqttVersion::MQTTv5, CountingRng(20000));
-        config.add_client_id("clientId-2m3km334gd");
-        config.max_packet_size = 100;
-        let mut recv_buffer = [0; 80];
-        let mut write_buffer = [0; 80];
-
-        let mut client =
-            MqttClient::<_, 5, _>::new(socket, &mut write_buffer, 80, &mut recv_buffer, 80, config);
-        
-        match client.connect_to_broker().await {
-            Ok(()) => {}
-            Err(mqtt_error) => match mqtt_error {
-                ReasonCode::NetworkError => {
-                    error!("MQTT Network Error");
-                    continue;
-                }
-                _ => {
-                    error!("Other MQTT Error: {:?}", mqtt_error);
-                    continue;
-                }
-            }
-        }
+        let mut mqtt_client = Minimq::new(&mut socket, timer1.timer0, config);
 
         loop {
             let random_number = rng.random();
-            info!("Sening number: {}", random_number);
+            info!("Sending number: {}", random_number);
 
             let mut number_string: String<32> = String::new();
             write!(number_string, "{:.2}", random_number).expect("write! failed!");
 
-            match client.send_message("random/1", number_string.as_bytes(), rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1, true).await {
+            match client
+                .send_message(
+                    "random/1",
+                    number_string.as_bytes(),
+                    rust_mqtt::packet::v5::publish_packet::QualityOfService::QoS1,
+                    true,
+                )
+                .await
+            {
                 Ok(()) => {}
                 Err(mqtt_error) => match mqtt_error {
                     ReasonCode::NetworkError => {
@@ -170,7 +163,6 @@ async fn main(spawner: Spawner) {
 
             Timer::after(Duration::from_secs(5)).await;
         }
-
     }
 
     // for inspiration have a look at the examples at https://github.com/esp-rs/esp-hal/tree/esp-hal-v1.0.0-beta.0/examples/src/bin
