@@ -1,3 +1,7 @@
 [mqtt_led]
 wifi_ssid = "FBI Surveillance Van"
 wifi_psk = "hunter2"
+mqtt_fqdn = "broker_fqdn"
+mqtt_port = 1234
+mqtt_username = "mqtt_user"
+mqtt_password = "pass123"

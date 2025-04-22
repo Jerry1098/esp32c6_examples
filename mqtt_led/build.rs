@@ -1,8 +1,39 @@
+
+
+#[toml_cfg::toml_config]
+pub struct Config {
+    #[default("")]
+    wifi_ssid: &'static str,
+    #[default("")]
+    wifi_psk: &'static str,
+    #[default("")]
+    mqtt_fqdn: &'static str,
+    #[default("")]
+    mqtt_port: u16,
+    #[default("")]
+    mqtt_username: &'static str,
+    #[default("")]
+    mqtt_password: &'static str,
+}
+
+
 fn main() {
     linker_be_nice();
+    check_toml_cfg();
     println!("cargo:rustc-link-arg=-Tdefmt.x");
     // make sure linkall.x is the last linker script (otherwise might cause problems with flip-link)
     println!("cargo:rustc-link-arg=-Tlinkall.x");
+}
+
+fn check_toml_cfg() {
+    if !std::path::Path::new("cfg.toml").exists() {
+        panic!("You need to create a `cfg.toml` file with your Wi-Fi credentials! Use `cfg.toml.example` as a template.");
+    }
+
+    let app_config = CONFIG;
+    if app_config.wifi_ssid == "FBI Surveillance Van" || app_config.wifi_psk == "hunter2" {
+        panic!("You need to set the Wi-Fi credentials in `cfg.toml`!");
+    }
 }
 
 fn linker_be_nice() {

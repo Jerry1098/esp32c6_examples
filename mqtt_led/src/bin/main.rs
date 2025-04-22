@@ -25,11 +25,27 @@ use smoltcp::wire::DnsQueryType;
 
 extern crate alloc;
 
-const SSID: &str = "";
-const PASSWORD: &str = "";
+#[toml_cfg::toml_config]
+pub struct Config {
+    #[default("")]
+    wifi_ssid: &'static str,
+    #[default("")]
+    wifi_psk: &'static str,
+    #[default("")]
+    mqtt_fqdn: &'static str,
+    #[default("")]
+    mqtt_port: u16,
+    #[default("")]
+    mqtt_username: &'static str,
+    #[default("")]
+    mqtt_password: &'static str,
+}
 
-const MQTT_FQDN: &str = "homeassistant";
-const MQTT_PORT: u16 = 1883;
+// const SSID: &str = "";
+// const PASSWORD: &str = "";
+
+// const MQTT_FQDN: &str = "homeassistant";
+// const MQTT_PORT: u16 = 1883;
 
 macro_rules! mk_static {
     ($t:ty,$val:expr) => {{
@@ -46,6 +62,8 @@ async fn main(spawner: Spawner) {
     rtt_target::rtt_init_defmt!();
 
     info!("Hello World");
+
+    let app_config = CONFIG;
 
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let peripherals = esp_hal::init(config);
@@ -103,7 +121,7 @@ async fn main(spawner: Spawner) {
         socket.set_timeout(Some(embassy_time::Duration::from_secs(15)));
 
         let mqtt_broker_ip_address = match stack
-            .dns_query(MQTT_FQDN, DnsQueryType::A)
+            .dns_query(app_config.mqtt_fqdn, DnsQueryType::A)
             .await
             .map(|a| a[0])
         {
@@ -114,7 +132,7 @@ async fn main(spawner: Spawner) {
             }
         };
 
-        let mqtt_endpoint = (mqtt_broker_ip_address, MQTT_PORT);
+        let mqtt_endpoint = (mqtt_broker_ip_address, app_config.mqtt_port);
         info!("Connecting...");
         let connection = socket.connect(mqtt_endpoint).await;
 
@@ -125,6 +143,8 @@ async fn main(spawner: Spawner) {
         info!("Connected!");
 
         let mut config = ClientConfig::new(rust_mqtt::client::client_config::MqttVersion::MQTTv5, CountingRng(20000));
+        config.add_username(app_config.mqtt_username);
+        config.add_password(app_config.mqtt_password);
         config.add_client_id("clientId-2m3km334gd");
         config.max_packet_size = 100;
         let mut recv_buffer = [0; 80];
@@ -159,11 +179,9 @@ async fn main(spawner: Spawner) {
                 Err(mqtt_error) => match mqtt_error {
                     ReasonCode::NetworkError => {
                         error!("MQTT Network Error");
-                        continue;
                     }
                     _ => {
                         error!("Other MQTT Error: {:?}", mqtt_error);
-                        continue;
                     }
                 },
             }
@@ -181,6 +199,8 @@ async fn connection(mut controller: WifiController<'static>) {
     info!("start connection task");
     debug!("Device capabilities: {:?}", controller.capabilities());
 
+    let app_config = CONFIG;
+
     loop {
         match esp_wifi::wifi::wifi_state() {
             WifiState::StaConnected => {
@@ -192,8 +212,8 @@ async fn connection(mut controller: WifiController<'static>) {
 
         if !matches!(controller.is_started(), Ok(true)) {
             let client_config = Configuration::Client(ClientConfiguration {
-                ssid: SSID.try_into().unwrap(),
-                password: PASSWORD.try_into().unwrap(),
+                ssid: app_config.wifi_ssid.try_into().unwrap(),
+                password: app_config.wifi_psk.try_into().unwrap(),
                 ..Default::default()
             });
             controller.set_configuration(&client_config).unwrap();
