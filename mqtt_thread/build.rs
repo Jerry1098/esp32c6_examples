@@ -1,3 +1,18 @@
+
+#[toml_cfg::toml_config]
+pub struct Config {
+    #[default("")]
+    thread_dataset: &'static str,
+    #[default("")]
+    mqtt_fqdn: &'static str,
+    #[default(1883)]
+    mqtt_port: u16,
+    #[default("")]
+    mqtt_username: &'static str,
+    #[default("")]
+    mqtt_password: &'static str,
+}
+
 fn main() {
     linker_be_nice();
     println!("cargo:rustc-link-arg=-Tdefmt.x");
