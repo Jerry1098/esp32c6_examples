@@ -4,7 +4,7 @@ pub struct Config {
     #[default("")]
     thread_dataset: &'static str,
     #[default("")]
-    mqtt_fqdn: &'static str,
+    mqtt_ip: &'static str,
     #[default(1883)]
     mqtt_port: u16,
     #[default("")]

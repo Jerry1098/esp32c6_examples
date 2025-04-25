@@ -65,6 +65,7 @@ tinyrlibc = { version = "0.5.0", default-features = false, features = [
   "utoa",
   "strtoul",
 ] }
+rust-mqtt = { version = "0.3.0", default-features = false, features = ["defmt"]}
 
 [build-dependencies]
 toml-cfg = "0.2.0"
