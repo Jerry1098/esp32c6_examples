@@ -4,11 +4,10 @@
 use core::net::{Ipv4Addr, Ipv6Addr};
 
 use core::fmt::Write;
-use defmt::{error, info, warn};
+use defmt::{error, info};
 use embassy_executor::Spawner;
 use embassy_net::{
-    tcp::{client, TcpSocket},
-    udp::{PacketMetadata, UdpMetadata, UdpSocket},
+    tcp::TcpSocket,
     ConfigV6, Ipv6Cidr, Runner, StackResources, StaticConfigV6,
 };
 use embassy_time::{Duration, Timer};
@@ -24,7 +23,7 @@ fn panic(_: &core::panic::PanicInfo) -> ! {
 use esp_ieee802154::Ieee802154;
 use heapless::{String, Vec};
 use openthread::{
-    enet::{self, EnetDriver, EnetDriverState, EnetRunner}, esp::EspRadio, BytesFmt, DeviceRole, OpenThread, OtResources, OtRngCore, SimpleRamSettings
+    enet::{self, EnetDriver, EnetDriverState, EnetRunner}, esp::EspRadio, DeviceRole, OpenThread, OtResources, OtRngCore, SimpleRamSettings
 };
 use rust_mqtt::{
     client::{client::MqttClient, client_config::ClientConfig},
@@ -74,8 +73,8 @@ async fn main(spawner: Spawner) {
 
     info!("Starting...");
 
-    let PREFIX = Ipv6Addr::new(0xfdb4, 0x4e7f, 0x4e8d, 0x2, 0, 0, 0, 0);
-    let PREFIX_LEN = 96;
+    let nat64_prefix = Ipv6Addr::new(0xfdb4, 0x4e7f, 0x4e8d, 0x2, 0, 0, 0, 0);
+    let net64_prefix_length = 96;
 
     // Prefixes:
     // fd42:4696:c9c:1::/64 paos low a800
@@ -214,7 +213,7 @@ async fn main(spawner: Spawner) {
 
         // let mqtt_ip = core::net::Ipv4Addr::new(192, 168, 1, 228);
         // let mqtt_ip = core::net::Ipv4Addr::new(1,1,1,1);
-        let mqtt_ip = synthesize_nat64(PREFIX, PREFIX_LEN, app_config.mqtt_ip.parse::<Ipv4Addr>().unwrap());
+        let mqtt_ip = synthesize_nat64(nat64_prefix, net64_prefix_length, app_config.mqtt_ip.parse::<Ipv4Addr>().unwrap());
         info!("Synthesized MQTT-Broker IPv6 address: {:?}", mqtt_ip);
         let mqtt_endpoint = (mqtt_ip, app_config.mqtt_port);
         info!("Connection to MQTT-Broker on {:?}", mqtt_endpoint);
