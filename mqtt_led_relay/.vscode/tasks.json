@@ -1,0 +1,34 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "cargo build",   
+        "type": "shell",        
+        "command": "cargo",   
+        "args": [
+          "build"               
+        ],
+        "group": {
+          "kind": "build",    
+          "isDefault": true     
+        },
+        "problemMatcher": ["$rustc"], 
+        "detail": "Rust build task using Cargo"
+      },
+      {
+        "label": "cargo flash",
+        "type": "shell",
+        "command": "cargo",
+        "args": [
+          "embed"
+        ],
+        "group": {
+          "kind": "build",    
+          "isDefault": false     
+        },
+        "problemMatcher": ["$rustc"], 
+        "detail": "Rust flash task using Cargo"
+      }
+    ]
+  }
+  

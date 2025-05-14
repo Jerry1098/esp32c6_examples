@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use core::net::Ipv6Addr;
+use core::net::{Ipv4Addr, Ipv6Addr};
 
 use core::fmt::Write;
 use defmt::{error, info, warn};
@@ -63,8 +63,6 @@ macro_rules! mk_static {
     }};
 }
 
-const BOUND_PORT: u16 = 1212;
-
 const IPV6_PACKET_SIZE: usize = 1280;
 const ENET_MAX_SOCKETS: usize = 2;
 
@@ -75,6 +73,27 @@ async fn main(spawner: Spawner) {
     rtt_target::rtt_init_defmt!();
 
     info!("Starting...");
+
+    let PREFIX = Ipv6Addr::new(0xfdb4, 0x4e7f, 0x4e8d, 0x2, 0, 0, 0, 0);
+    let PREFIX_LEN = 96;
+
+    // Prefixes:
+    // fd42:4696:c9c:1::/64 paos low a800
+    // Routes:
+    // fdb4:4e7f:4e8d:2:0:0::/96 
+    // fc00::/7 s med a800
+
+    // Goal: fd42:4696:c9c:2:0:0:c0a8:1e4 for 192.168.1.228
+    // Got:  fd42:1258:0c9c:0002:0000:0000:c0a8:01e4
+    // let prefix = Ipv6Addr::new(0xfdb4, 0x4e7f, 0x4e8d, 0x2, 0, 0, 0, 0);
+    // let prefix_len = 96;
+    // let prefix = Ipv6Addr::new(0xfd42, 4696, 0xc9c, 1, 0, 0, 0, 0);
+    // let prefix_len = 64;
+    // let ipv4 = Ipv4Addr::new(192, 168, 1, 228);
+
+    // let net64_ipv6 = synthesize_nat64(prefix, prefix_len, ipv4);
+
+    // info!("Synthesized IPv6 address: {:?}", net64_ipv6);
 
     let app_config = CONFIG;
 
@@ -163,15 +182,19 @@ async fn main(spawner: Spawner) {
 
             let (linklocal_addr, linklocal_prefix) = addrs
                 .iter()
-                .find(|(addr, _)| addr.is_unicast_link_local()) //segments()[0] == 0xfdeb)
+                .find(|(addr, _)| addr.segments()[0] == 0xfdb4) // .is_unicast_link_local()) //segments()[0] == 0xfdeb)
                 .expect("No link-local address found");
 
             info!("Will bind to link-local {:?} Ipv6 addr", linklocal_addr);
+            info!(
+                "Will bind to link-local {:?} Ipv6 prefix",
+                linklocal_prefix
+            );
 
             stack.set_config_v6(ConfigV6::Static(StaticConfigV6 {
                 address: Ipv6Cidr::new(*linklocal_addr, *linklocal_prefix),
-                gateway: None,           // TODO
-                dns_servers: Vec::new(), // TODO
+                gateway: None,           // TODO (not needed asof now any trafic outside of thread needs to use nat64 addresses that need to be self generated) should be the otbr address?
+                dns_servers: Vec::new(), // TODO (can be any address using nat64 synthesis)
             }));
 
             break;
@@ -190,7 +213,9 @@ async fn main(spawner: Spawner) {
         socket.set_timeout(Some(Duration::from_secs(15)));
 
         // let mqtt_ip = core::net::Ipv4Addr::new(192, 168, 1, 228);
-        let mqtt_ip = core::net::Ipv4Addr::new(1,1,1,1);
+        // let mqtt_ip = core::net::Ipv4Addr::new(1,1,1,1);
+        let mqtt_ip = synthesize_nat64(PREFIX, PREFIX_LEN, app_config.mqtt_ip.parse::<Ipv4Addr>().unwrap());
+        info!("Synthesized MQTT-Broker IPv6 address: {:?}", mqtt_ip);
         let mqtt_endpoint = (mqtt_ip, app_config.mqtt_port);
         info!("Connection to MQTT-Broker on {:?}", mqtt_endpoint);
         let connection = socket.connect(mqtt_endpoint).await;
@@ -304,4 +329,31 @@ async fn run_ot_ip_info(ot: OpenThread<'static>) -> ! {
 
         ot.wait_changed().await;
     }
+}
+
+
+/// This function mimics the NAT64 synthesis function Address::SynthesizeFromIp4Address
+/// from the OpenThread codebase.
+fn synthesize_nat64(prefix: Ipv6Addr, prefix_len: u8, ipv4: Ipv4Addr) -> Ipv6Addr {
+    
+    assert!([32, 40, 48, 56, 64, 96].contains(&prefix_len), "Invalid prefix length");
+
+    let mut ipv6_bytes = prefix.octets();
+    let ipv4_bytes = ipv4.octets();
+
+    let skip_index = 8; // kSkipIndex
+    let mut ip6_index = (prefix_len / 8) as usize; // aPrefix.GetLength() / kBitsPerByte;
+
+    for &b in ipv4_bytes.iter() {
+        if ip6_index == skip_index {
+            ip6_index += 1;
+        }
+        if ip6_index >= 16 {
+            break;
+        }
+        ipv6_bytes[ip6_index] = b;
+        ip6_index += 1;
+    }
+
+    Ipv6Addr::from(ipv6_bytes)
 }

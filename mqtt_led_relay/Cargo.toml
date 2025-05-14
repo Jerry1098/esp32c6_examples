@@ -1,22 +1,21 @@
 [package]
 edition = "2021"
-name = "mqtt_thread"
+name    = "mqtt_led_relay"
 version = "0.1.0"
 
 [[bin]]
-name = "mqtt_thread"
+name = "mqtt_led_relay"
 path = "./src/bin/main.rs"
 
 [dependencies]
 defmt = "1.0.1"
-embassy-net = { version = "0.7.0", features = [
+embassy-net = { version = "0.6.0", features = [
   "dhcpv4",
   "medium-ethernet",
   "tcp",
   "udp",
-  "proto-ipv6",
-  "medium-ip",
   "defmt",
+  "dns",
 ] }
 embedded-io = "0.6.1"
 embedded-io-async = "0.6.1"
@@ -27,7 +26,6 @@ esp-hal = { version = "1.0.0-beta.0", features = [
   "unstable",
 ] }
 rtt-target = { version = "0.6.1", features = ["defmt"] }
-esp-ieee802154 = { version = "0.6.0", features = ["defmt", "esp32c6"] }
 smoltcp = { version = "0.12.0", default-features = false, features = [
   "medium-ethernet",
   "multicast",
@@ -48,24 +46,19 @@ embassy-executor = { version = "0.7.0", features = [
 ] }
 embassy-time = { version = "0.4.0", features = ["generic-queue-8"] }
 esp-hal-embassy = { version = "0.7.0", features = ["esp32c6"] }
+esp-wifi = { version = "0.13.0", features = [
+  "builtin-scheduler",
+  "defmt",
+  "esp-alloc",
+  "esp32c6",
+  "wifi",
+] }
 heapless = { version = "0.8.0", default-features = false }
 static_cell = { version = "2.1.0", features = ["nightly"] }
-toml-cfg = "0.2.0"
-
-openthread = { git = "https://github.com/Jerry1098/openthread.git", features = [
-  "embassy-net-driver-channel",
-  "defmt",
-  "srp",
-  "edge-nal",
-  "esp-ieee802154",
-  "udp"
-] }
-
-tinyrlibc = { version = "0.5.0", default-features = false, features = [
-  "utoa",
-  "strtoul",
-] }
 rust-mqtt = { version = "0.3.0", default-features = false, features = ["defmt"]}
+toml-cfg = "0.2.0"
+anyhow = { version = "1.0.98", default-features = false }
+
 
 [build-dependencies]
 toml-cfg = "0.2.0"
@@ -76,10 +69,10 @@ toml-cfg = "0.2.0"
 opt-level = "s"
 
 [profile.release]
-codegen-units = 1        # LLVM can perform better optimizations using a single thread
-debug = 2
+codegen-units    = 1     # LLVM can perform better optimizations using a single thread
+debug            = 2
 debug-assertions = false
-incremental = false
-lto = 'fat'
-opt-level = 's'
-overflow-checks = false
+incremental      = false
+lto              = 'fat'
+opt-level        = 's'
+overflow-checks  = false
